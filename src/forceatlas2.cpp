@@ -2,17 +2,27 @@
 using namespace Rcpp;
 
 
+//' n-norm distance
+//' @param n1 Numeric vector of coordinates.
+//' @param n2 Numeric vector of coordinates.
+//' @param norm Order of the norm.
+//' @return Scalar. Distance between two vectors (norm).
 // [[Rcpp::export]]
-double fa2_distance(NumericVector& n1, NumericVector& n2)
+double fa2_distance(
+  NumericVector& n1, NumericVector& n2,
+  double norm = 2.0
+)
 {
   double dis = 0.0;
   for(int i=0;i<n1.size();i++)
-    dis += pow(n1[i] - n2[i],2.0);
+    dis += pow(n1[i] - n2[i],norm);
     
-  return sqrt(dis);
+  return pow(dis,1/norm);
 }
 
-/* Get ids */
+//' Retrives vertices' ids
+//' @param G Two column matrix with vertex ids.
+//' @return Integer vector with vertices ids.
 // [[Rcpp::export]]
 IntegerVector fa2_getids(IntegerMatrix& G)
 {
@@ -52,6 +62,10 @@ int fa2_degreei(IntegerMatrix& G, int id)
   return d;  
 }
 
+//' Degree of each node
+//' @param G Two column matrix with vertex ids.
+//' @return A two column matrix. Column one has vertices ids and 
+//' column two has its degrees.
 // [[Rcpp::export]]
 IntegerMatrix fa2_degree(IntegerMatrix& G) 
 {
@@ -66,6 +80,9 @@ IntegerMatrix fa2_degree(IntegerMatrix& G)
   return d;  
 }
 
+//' Returns only the degree index
+//' @describeIn fa2_degree Returns an integer vector with the degree
+//' of each vertex.
 // [[Rcpp::export]]
 IntegerVector fa2_degree_index(IntegerMatrix& G) 
 {
@@ -79,6 +96,10 @@ IntegerVector fa2_degree_index(IntegerMatrix& G)
   return d;  
 }
 
+//' Geometric centre of a graph
+//' @param pos K column matrix with vertex positions.
+//' @return K length numeric vector pointing to the centre of the
+//' graph.
 // [[Rcpp::export]]
 NumericVector fa2_get_center(NumericMatrix& pos)
 {
@@ -117,6 +138,7 @@ NumericVector fa2_get_center(NumericMatrix& pos)
 ATTRACTION REPULSION FORCES
 */
 
+//' Attracction and repulsion forces between two nodes
 //' @param n1 Position of node 1
 //' @param n2 Position of node 2
 //' @param d1 Degree of node 1
@@ -126,6 +148,7 @@ ATTRACTION REPULSION FORCES
 //' @param kr Repulsion constant 
 //' @param kr2 
 //' @param ka Attraction constant
+// [[Rcpp::export]]
 double fa2_forcei(
   NumericVector n1, NumericVector n2,
   int d1, int d2,
@@ -153,11 +176,19 @@ double fa2_forcei(
 }
 
 //' Estimates the force of a system
+//' @param pos A k-column matrix with vertices' positions.
+//' @param G Two column matrix with vertex ids.
+//' @param size Numeric vector with vertices' sizes.
+//' @param kr Repulsion constant 
+//' @param kr2 
+//' @param ka Attraction constant
 // [[Rcpp::export]]
 NumericMatrix fa2_force(
   NumericMatrix& pos,
   IntegerMatrix& G,
-  NumericVector& size
+  NumericVector& size,
+  double kr=1.0, double kr2=100.0, double ka=1.0,
+  bool nooverlap = false
   )
 {
   int N    = G.rows();
@@ -170,7 +201,9 @@ NumericMatrix fa2_force(
     for(int j=0;j<N;j++)
       if (i<j) 
       {
-        tmp = fa2_forcei(pos(i,_),pos(j,_),d[i],d[j],size[i],size[j]);
+        tmp = fa2_forcei(
+          pos(i,_),pos(j,_),d[i],d[j],size[i],size[j],
+          kr, kr2, ka, nooverlap);
         F(i,j) = tmp;
         F(j,i) = tmp;
       }
